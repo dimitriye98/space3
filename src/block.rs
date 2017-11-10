@@ -1,11 +1,10 @@
-use noise::{Fbm, Seedable, MultiFractal};
+use noise::{Fbm, Seedable, MultiFractal, NoiseModule};
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::ops::Deref;
 
 pub struct World {
-	seed: usize,
 	generator: Fbm<f32>,
 	chunks: RefCell<HashMap<[i64; 3], Weak<RefCell<Chunk>>>>,
 }
@@ -17,8 +16,6 @@ impl World {
 	pub fn new() -> World {
 		let seed = 12;
 		World {
-			seed: seed,
-
 			generator: Fbm::new().set_seed(seed)
 			                     .set_octaves(6)
 			                     .set_lacunarity(2.0),
@@ -44,7 +41,8 @@ impl World {
 						let (block_x, block_y, block_z) = (CHUNK_SIZE as i64 * x + index_x as i64, CHUNK_SIZE as i64 * y + index_y as i64, CHUNK_SIZE as i64 * z + index_z as i64);
 
 						let mut density = -block_z as f32 / 128.0;
-						//density += self.generator.apply(&self.seed, &[block_x as f32, block_y as f32, block_z as f32]);
+						let noise = self.generator.get([block_x as f32 / 128.0, block_y as f32 / 128.0, block_z as f32 / 128.0]) * 64.0;
+						density += (noise);
 
 						if density > 0.0 {
 							chunk.blocks[index_x][index_y][index_z] = 1;

@@ -15,7 +15,6 @@ mod block;
 mod engine;
 
 fn main() {
-	use glium::DisplayBuild;
 	use time::PreciseTime;
 
 	use engine::{Game, StatePlaying, DrawService};
@@ -23,11 +22,17 @@ fn main() {
 	let vertex_shader_src   = include_str!("standard.vert");
 	let fragment_shader_src = include_str!("standard.frag");
 
-	let display = glium::glutin::WindowBuilder::new().with_depth_buffer(24).build_glium().unwrap();
+	let mut events_loop = glium::glutin::EventsLoop::new();
+	let window = glium::glutin::WindowBuilder::new();
+	let context = glium::glutin::ContextBuilder::new().with_depth_buffer(24);
+	let display = glium::Display::new(window, context, &events_loop)
+			.expect("Failed to initialize display");
 
 	let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-	let mut game = Game::new(Box::new(StatePlaying::new()), display, program);
+	println!("Should live here");
+
+	let mut game = Game::new(Box::new(StatePlaying::new()), display, events_loop, program);
 
 	let mut last_tick: PreciseTime = PreciseTime::now();
 

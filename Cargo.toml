@@ -5,7 +5,6 @@ version = "0.1.0"
 
 [dependencies]
 bitflags = "*"
-glium = "*"
 image = "*"
 nalgebra = "*"
 ncollide = "*"
@@ -13,3 +12,7 @@ noise = "*"
 rand = "*"
 time = "*"
 ndarray = "*"
+
+[dependencies.glium]
+version = "*"
+features = ["glutin"]

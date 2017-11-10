@@ -1,14 +1,12 @@
-use na::ToHomogeneous;
-
-use noise::{Brownian3, Seed};
+use noise::{Fbm, Seedable, MultiFractal};
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::ops::Deref;
 
 pub struct World {
-	seed: Seed,
-	generator: Brownian3<f32, fn(&Seed, &[f32; 3]) -> f32>,
+	seed: usize,
+	generator: Fbm<f32>,
 	chunks: RefCell<HashMap<[i64; 3], Weak<RefCell<Chunk>>>>,
 }
 
@@ -17,9 +15,14 @@ use noise;
 use rand::Rand;
 impl World {
 	pub fn new() -> World {
+		let seed = 12;
 		World {
-			seed: Seed::new(12),
-			generator: Brownian3::new(noise::perlin3 as fn(&Seed, &[f32; 3]) -> f32, 4).wavelength(128.0),
+			seed: seed,
+
+			generator: Fbm::new().set_seed(seed)
+			                     .set_octaves(6)
+			                     .set_lacunarity(2.0),
+
 			chunks: RefCell::new(HashMap::new()),
 		}
 	}
@@ -41,7 +44,7 @@ impl World {
 						let (block_x, block_y, block_z) = (CHUNK_SIZE as i64 * x + index_x as i64, CHUNK_SIZE as i64 * y + index_y as i64, CHUNK_SIZE as i64 * z + index_z as i64);
 
 						let mut density = -block_z as f32 / 128.0;
-						density += self.generator.apply(&self.seed, &[block_x as f32, block_y as f32, block_z as f32]);
+						//density += self.generator.apply(&self.seed, &[block_x as f32, block_y as f32, block_z as f32]);
 
 						if density > 0.0 {
 							chunk.blocks[index_x][index_y][index_z] = 1;
@@ -61,15 +64,14 @@ pub trait Region {
 	fn draw(display: &Display);
 }
 
-use ndarray::{Array, Ix};
+use ndarray::{Array, Ix3};
 pub struct CuboidRegion {
 	start_pos: [i64; 3],
-	chunks: Array<Rc<RefCell<Chunk>>, (Ix, Ix, Ix)>,
+	chunks: Array<Rc<RefCell<Chunk>>, Ix3>,
 }
 
 use engine::DrawService;
 use ndarray::Axis;
-use na::Isometry3;
 impl CuboidRegion {
 	pub fn new(
 		world: &World,
@@ -272,6 +274,7 @@ use na::{Matrix3, Matrix4};
 use gl_util::Vertex;
 impl Chunk {
 	pub fn new(blocks: [[[usize; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE]) -> Chunk {
+		println!("Is it alive here?");
 		Chunk {
 			blocks: blocks,
 			mesh: RefCell::new(Option::None),
@@ -482,4 +485,3 @@ impl Chunk {
 
 	}
 }
-

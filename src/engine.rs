@@ -3,12 +3,11 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::slice::Iter;
+use std::mem::replace;
 
-use glium::backend::glutin_backend::GlutinFacade;
 use glium::{Program, Display, Frame, Surface, VertexBuffer, IndexBuffer};
 use glium::glutin::{Window, VirtualKeyCode};
-use glium::glutin::Event;
-use glium::backend::glutin_backend::PollEventsIter;
+use glium::glutin::{EventsLoop, Event, WindowEvent};
 use glium::index::IndicesSource;
 use glium::vertex::MultiVerticesSource;
 use glium::uniforms::Uniforms;
@@ -16,7 +15,7 @@ use glium::draw_parameters::PolygonMode;
 
 use time::Duration;
 
-use na::{Point3, Vector3, Matrix3, Matrix4, PerspectiveMatrix3, Rotation3, Norm, ToHomogeneous, Cross};
+use na::{Point3, Vector3, Matrix3, Matrix4, Perspective3, Rotation3};
 
 use gl_util::{Camera, Vertex, SimpleCamera};
 use block::{BlockRenderData, Chunk, CHUNK_SIZE, CuboidRegion};
@@ -33,13 +32,14 @@ pub struct GameServices {
 }
 
 impl Game {
-	pub fn new(start_state: Box<GameState>, display: Display, shaders: Program) -> Game {
+	pub fn new(start_state: Box<GameState>, display: Display, ev_loop: EventsLoop, shaders: Program)
+			-> Game {
 		let disp = Rc::new(display);
 		Game {
 			state: start_state,
 			services: GameServices {
 				draw_service: DrawService::new(disp.clone(), shaders),
-				input_service: InputService::new(disp),
+				input_service: InputService::new(disp, ev_loop),
 			},
 			running: true,
 		}
@@ -72,13 +72,15 @@ impl Game {
 
 pub struct InputService {
 	display: Rc<Display>,
+	events_loop: EventsLoop,
 	events: Vec<Event>,
 }
 
 impl InputService {
-	pub fn new(display: Rc<Display>) -> InputService {
+	pub fn new(display: Rc<Display>, events_loop: EventsLoop) -> InputService {
 		let mut ret = InputService {
 			display: display,
+			events_loop: events_loop,
 			events: Vec::new(),
 		};
 		ret.flush_event_queue();
@@ -86,7 +88,9 @@ impl InputService {
 	}
 
 	pub fn flush_event_queue(&mut self) {
-		self.events = self.display.poll_events().collect();
+		let mut new_events = Vec::new();
+		self.events_loop.poll_events(|ev| new_events.push(ev));
+		replace(&mut self.events, new_events);
 	}
 
 	pub fn events(&self) -> Iter<Event> {
@@ -94,14 +98,11 @@ impl InputService {
 	}
 
 	pub fn size(&self) -> Option<(u32, u32)> {
-		self.display.get_window().and_then(|win| win.get_inner_size_points())
+		self.display.gl_window().get_inner_size_points()
 	}
 
 	pub fn set_cursor_position(&self, x: i32, y: i32) {
-		match self.display.get_window() {
-			Some(win) => { win.set_cursor_position(x, y); },
-			None => (),
-		}
+		self.display.gl_window().set_cursor_position(x, y);
 	}
 }
 
@@ -109,7 +110,7 @@ pub struct DrawService {
 	display: Rc<Display>,
 	frame: Frame,
 	program: Program,
-	perspective: PerspectiveMatrix3<f32>,
+	perspective: Perspective3<f32>,
 }
 
 impl Drop for DrawService {
@@ -119,14 +120,14 @@ impl Drop for DrawService {
 }
 
 impl DrawService {
-	fn build_perspective(frame: &Frame) -> PerspectiveMatrix3<f32> {
+	fn build_perspective(frame: &Frame) -> Perspective3<f32> {
 		let (width, height) = frame.get_dimensions();
 
 		let fov: f32 = ::std::f32::consts::PI / 3.0;
 		let zfar = 1024.0;
 		let znear = 0.001;
 
-		PerspectiveMatrix3::new(width as f32 / height as f32, fov, znear, zfar)
+		Perspective3::new(width as f32 / height as f32, fov, znear, zfar)
 	}
 
 	pub fn new(display: Rc<Display>, program: Program) -> DrawService {
@@ -212,8 +213,11 @@ const MOTION_SENSITIVITY_FAST: f32 = 0.1;
 use block::World;
 impl StatePlaying {
 	pub fn new() -> StatePlaying {
+		println!("Should still be alive.");
 		let world = World::new();
+		println!("Is it the world or the region");
 		let region = CuboidRegion::new(&world, -5, -5, -5, 5, 5, 5);
+		println!("Dead here?");
 		let mut ret = StatePlaying {
 			world: World::new(),
 			block_render_types: Vec::with_capacity(2),
@@ -235,6 +239,7 @@ impl StatePlaying {
 			color: [0.3, 0.4, 0.2],
 			should_render: true,
 		});
+		println!("Dead yet?");
 		ret
 	}
 }
@@ -247,23 +252,54 @@ impl GameState for StatePlaying {
 		for ev in services.input_service.events() {
 			use glium::glutin::ElementState;
 			match ev {
-				&Event::Closed => return UpdateResult::Quit,   // the window has been closed by the user
-				&Event::KeyboardInput(pressed, _, key) => match key {
-					None => (),
-					Some(key) => match key {
-						VirtualKeyCode::Escape => return UpdateResult::Quit,
-						code => match pressed {
-							ElementState::Pressed => { self.keys_down.insert(code); },
-							ElementState::Released => { self.keys_down.remove(&code); },
-						},
+				&Event::WindowEvent {
+					event: WindowEvent::Closed,
+					..
+				} => return UpdateResult::Quit,   // the window has been closed by the user
+
+				&Event::WindowEvent {
+					event: WindowEvent::KeyboardInput {
+						input: input,
+						..
+					},
+					..
+				} => {
+					let ::glium::glutin::KeyboardInput {
+						virtual_keycode: opt_key,
+						state: state,
+						..
+					} = input;
+					match opt_key {
+						None => (),
+						Some(key) => match key {
+							VirtualKeyCode::Escape => return UpdateResult::Quit,
+							code => match state {
+								ElementState::Pressed => { self.keys_down.insert(code); },
+								ElementState::Released => { self.keys_down.remove(&code); },
+							},
+						}
 					}
 				},
-				&Event::MouseMoved(raw_x, raw_y) => {
+
+				&Event::WindowEvent {
+					event: WindowEvent::MouseMoved{
+						position: (raw_x, raw_y),
+						..
+					},
+					..
+				} => {
 					let (size_x, size_y) = services.input_service.size().unwrap();
 					services.input_service.set_cursor_position((size_x / 2) as i32, (size_y / 2) as i32);
-					let (delta_x, delta_y) = (raw_x - size_x as i32, raw_y - size_y as i32);
-					self.camera.direction *= Rotation3::new(self.camera.up * (delta_x as f32) * MOUSE_SENSITIVITY);
-					self.camera.direction *= Rotation3::new(self.camera.up.cross(&self.camera.direction) * (delta_y as f32) * MOUSE_SENSITIVITY);
+
+					let (delta_x, delta_y) = (raw_x - size_x as f64, raw_y - size_y as f64);
+
+
+					let dir = &mut self.camera.direction;
+					let up  = &self.camera.up;
+
+					*dir = Rotation3::new(up            * delta_x as f32 * MOUSE_SENSITIVITY)
+					     * Rotation3::new(up.cross(dir) * delta_y as f32 * MOUSE_SENSITIVITY)
+					     * (*dir);
 				},
 
 				_ => ()
@@ -320,4 +356,3 @@ impl GameState for StatePlaying {
 		self.region.draw(&self.block_render_types, draw_service, self.camera.to_isometry().to_homogeneous());
 	}
 }
-

@@ -289,17 +289,20 @@ impl GameState for StatePlaying {
 					..
 				} => {
 					let (size_x, size_y) = services.input_service.size().unwrap();
-					services.input_service.set_cursor_position((size_x / 2) as i32, (size_y / 2) as i32);
+					let (mid_x, mid_y) = (size_x / 2, size_y / 2);
+					services.input_service.set_cursor_position(mid_x as i32, mid_y as i32);
 
-					let (delta_x, delta_y) = (raw_x - size_x as f64, raw_y - size_y as f64);
-
+					let (delta_x, delta_y) = (raw_x - mid_x as f64, raw_y - mid_y as f64);
 
 					let dir = &mut self.camera.direction;
+					println!("{}", dir);
 					let up  = &self.camera.up;
 
 					*dir = Rotation3::new(up            * delta_x as f32 * MOUSE_SENSITIVITY)
 					     * Rotation3::new(up.cross(dir) * delta_y as f32 * MOUSE_SENSITIVITY)
 					     * (*dir);
+
+					dir[2] = f32::min(-0.9, f32::max(0.9, dir[2]));
 				},
 
 				_ => ()

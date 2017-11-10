@@ -22,7 +22,7 @@ fn main() {
 	let vertex_shader_src   = include_str!("standard.vert");
 	let fragment_shader_src = include_str!("standard.frag");
 
-	let mut events_loop = glium::glutin::EventsLoop::new();
+	let events_loop = glium::glutin::EventsLoop::new();
 	let window = glium::glutin::WindowBuilder::new();
 	let context = glium::glutin::ContextBuilder::new().with_depth_buffer(24);
 	let display = glium::Display::new(window, context, &events_loop)

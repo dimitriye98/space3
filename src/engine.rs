@@ -206,9 +206,9 @@ pub struct StatePlaying {
 	region: CuboidRegion,
 }
 
-const MOUSE_SENSITIVITY:  f32 = 0.001;
-const MOTION_SENSITIVITY: f32 = 0.01;
-const MOTION_SENSITIVITY_FAST: f32 = 0.1;
+const MOUSE_SENSITIVITY:  f32 = 0.00000001;
+const MOTION_SENSITIVITY: f32 = 0.00001;
+const MOTION_SENSITIVITY_FAST: f32 = 0.001;
 
 use block::World;
 impl StatePlaying {
@@ -298,11 +298,13 @@ impl GameState for StatePlaying {
 					println!("{}", dir);
 					let up  = &self.camera.up;
 
-					*dir = Rotation3::new(up            * delta_x as f32 * MOUSE_SENSITIVITY)
-					     * Rotation3::new(up.cross(dir) * delta_y as f32 * MOUSE_SENSITIVITY)
+					*dir = Rotation3::new(up            *  delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
+					     * Rotation3::new(up.cross(dir) * -delta_y as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
 					     * (*dir);
 
-					dir[2] = f32::min(-0.9, f32::max(0.9, dir[2]));
+					*dir = dir.normalize();
+
+					dir[2] = f32::max(-0.9, f32::min(0.9, dir[2]));
 				},
 
 				_ => ()
@@ -320,10 +322,10 @@ impl GameState for StatePlaying {
 			(false, false) => (),
 
 			(true, false) => {
-				self.camera.position -= self.camera.direction.cross(&self.camera.up) * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= self.camera.direction.cross(&self.camera.up) * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 			},
 			(false, true) => {
-				self.camera.position -= -1.0 * self.camera.direction.cross(&self.camera.up) * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= -1.0 * self.camera.direction.cross(&self.camera.up) * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 			},
 		}
 
@@ -332,10 +334,10 @@ impl GameState for StatePlaying {
 			(false, false) => (),
 
 			(true, false) => {
-				self.camera.position -= -1.0 * self.camera.direction * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= -1.0 * self.camera.direction * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 			},
 			(false, true) => {
-				self.camera.position -= self.camera.direction * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= self.camera.direction * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 			},
 		}
 
@@ -344,11 +346,11 @@ impl GameState for StatePlaying {
 			(false, false) => (),
 
 			(true, false) => {
-				self.camera.position -= -1.0 * self.camera.up * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= -1.0 * self.camera.up * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 
 			},
 			(false, true) => {
-				self.camera.position -= self.camera.up * time_elapsed.num_milliseconds() as f32 * dolly_speed;
+				self.camera.position -= self.camera.up * time_elapsed.num_microseconds().unwrap() as f32 * dolly_speed;
 			},
 		}
 

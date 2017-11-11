@@ -272,7 +272,6 @@ use na::{Matrix3, Matrix4};
 use gl_util::Vertex;
 impl Chunk {
 	pub fn new(blocks: [[[usize; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE]) -> Chunk {
-		println!("Is it alive here?");
 		Chunk {
 			blocks: blocks,
 			mesh: RefCell::new(Option::None),

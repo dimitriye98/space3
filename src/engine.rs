@@ -213,11 +213,8 @@ const MOTION_SENSITIVITY_FAST: f32 = 0.001;
 use block::World;
 impl StatePlaying {
 	pub fn new() -> StatePlaying {
-		println!("Should still be alive.");
 		let world = World::new();
-		println!("Is it the world or the region");
 		let region = CuboidRegion::new(&world, -5, -5, -5, 5, 5, 5);
-		println!("Dead here?");
 		let mut ret = StatePlaying {
 			world: World::new(),
 			block_render_types: Vec::with_capacity(2),
@@ -239,7 +236,6 @@ impl StatePlaying {
 			color: [0.3, 0.4, 0.2],
 			should_render: true,
 		});
-		println!("Dead yet?");
 		ret
 	}
 }
@@ -295,7 +291,6 @@ impl GameState for StatePlaying {
 					let (delta_x, delta_y) = (raw_x - mid_x as f64, raw_y - mid_y as f64);
 
 					let dir = &mut self.camera.direction;
-					println!("{}", dir);
 					let up  = &self.camera.up;
 
 					*dir = Rotation3::new(up            * -delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)

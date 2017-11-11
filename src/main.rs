@@ -30,8 +30,6 @@ fn main() {
 
 	let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
 
-	println!("Should live here");
-
 	let mut game = Game::new(Box::new(StatePlaying::new()), display, events_loop, program);
 
 	let mut last_tick: PreciseTime = PreciseTime::now();

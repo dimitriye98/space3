@@ -298,7 +298,7 @@ impl GameState for StatePlaying {
 					println!("{}", dir);
 					let up  = &self.camera.up;
 
-					*dir = Rotation3::new(up            *  delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
+					*dir = Rotation3::new(up            * -delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
 					     * Rotation3::new(up.cross(dir) * -delta_y as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
 					     * (*dir);
 

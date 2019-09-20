@@ -11,7 +11,7 @@ pub struct World {
 
 use rand;
 use noise;
-use rand::Rand;
+use rand::distributions::Standard;
 impl World {
 	pub fn new() -> World {
 		let seed = 12;

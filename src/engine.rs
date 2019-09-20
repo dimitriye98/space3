@@ -76,6 +76,7 @@ pub struct InputService {
 	events: Vec<Event>,
 }
 
+use glium::glutin::dpi::{LogicalSize, LogicalPosition};
 impl InputService {
 	pub fn new(display: Rc<Display>, events_loop: EventsLoop) -> InputService {
 		let mut ret = InputService {
@@ -97,12 +98,12 @@ impl InputService {
 		self.events.iter()
 	}
 
-	pub fn size(&self) -> Option<(u32, u32)> {
-		self.display.gl_window().get_inner_size_points()
+	pub fn size(&self) -> Option<LogicalSize> {
+		self.display.gl_window().get_inner_size()
 	}
 
-	pub fn set_cursor_position(&self, x: i32, y: i32) {
-		self.display.gl_window().set_cursor_position(x, y);
+	pub fn set_cursor_position(&self, pos: LogicalPosition) {
+		self.display.gl_window().set_cursor_position(pos);
 	}
 }
 
@@ -247,9 +248,10 @@ impl GameState for StatePlaying {
 	fn update(&mut self, services: &GameServices, time_elapsed: &Duration) -> UpdateResult {
 		for ev in services.input_service.events() {
 			use glium::glutin::ElementState;
+			use glium::glutin::dpi::LogicalPosition;
 			match ev {
 				&Event::WindowEvent {
-					event: WindowEvent::Closed,
+					event: WindowEvent::CloseRequested,
 					..
 				} => return UpdateResult::Quit,   // the window has been closed by the user
 
@@ -278,22 +280,22 @@ impl GameState for StatePlaying {
 				},
 
 				&Event::WindowEvent {
-					event: WindowEvent::MouseMoved{
-						position: (raw_x, raw_y),
+					event: WindowEvent::CursorMoved{
+						position: LogicalPosition{x: raw_x, y: raw_y},
 						..
 					},
 					..
 				} => {
-					let (size_x, size_y) = services.input_service.size().unwrap();
-					let (mid_x, mid_y) = (size_x / 2, size_y / 2);
-					services.input_service.set_cursor_position(mid_x as i32, mid_y as i32);
+					let size = services.input_service.size().unwrap();
+					let mid: LogicalPosition = (size.width / 2.0, size.height / 2.0).into();
+					services.input_service.set_cursor_position(mid);
 
-					let (delta_x, delta_y) = (raw_x - mid_x as f64, raw_y - mid_y as f64);
+					let (delta_x, delta_y) = (raw_x - mid.x, raw_y - mid.y);
 
 					let dir = &mut self.camera.direction;
 					let up  = &self.camera.up;
 
-					*dir = Rotation3::new(up            * -delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
+					*dir = Rotation3::new(up               * -delta_x as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
 					     * Rotation3::new(up.cross(dir) * -delta_y as f32 * MOUSE_SENSITIVITY * time_elapsed.num_microseconds().unwrap() as f32)
 					     * (*dir);
 
